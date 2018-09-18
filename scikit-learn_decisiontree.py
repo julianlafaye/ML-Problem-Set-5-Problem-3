@@ -14,9 +14,8 @@ new_data = pd.get_dummies(dataset[['Survived','Pclass','Sex','SibSp','Embarked']
 print(new_data.head())
 X = new_data.drop('Survived', axis=1)
 y = new_data['Survived']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20)
 classifier = DecisionTreeClassifier()
-classifier.fit(X_train, y_train)
+classifier.fit(X, y)
 dot_data = tree.export_graphviz(classifier, out_file=None,
                          feature_names=list(new_data.drop('Survived', axis=1)),
                          class_names="Survival",
