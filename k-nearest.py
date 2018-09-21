@@ -1,69 +1,101 @@
-import math
-import operator
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+import scipy.spatial.distance as metric
 
 
-def find_distance(point1, point2, length):
-    distance = 0
-    for x in range(length):
-        distance += (point1[x] - point2[x])**2
-    return math.sqrt(distance)
+def initialize(dataset, k):
+    # Create random cluster centroids for intial
+
+    # Find number of features in dataset
+    n = np.shape(dataset)[1]
+
+    # The centroids
+    centroids = np.mat(np.zeros((k, n)))
+
+    # Fill list with random points
+    for i in range(n):
+        min_i = min(dataset[:, i])
+        range_i = float(max(dataset[:, i]) - min_i)
+        centroids[:, i] = min_i + range_i * np.random.rand(k, 1)
+
+    # Return centroids
+    return centroids
 
 
-def find_color(neighbors, k):
-    classes = {}
-    for x in range(len(neighbors)):
-        count = neighbors[x][-1]
-        if count in classes:
-            classes[count] += 1
-        else:
-            classes[count] = 1
-    sorted_by_count = sorted(classes.items(), key=operator.itemgetter(1), reverse=True)
-    top_choice = int(sorted_by_count[0][0])
-    return top_choice
+def cluster(dataset, k):
+    # The clustering algorithm
+
+    # Number of rows in dataset
+    m = np.shape(dataset)[0]
+
+    # Assign cluster classes
+    cluster_class = np.mat(np.zeros((m, 2)))
+
+    # Initialize centroids
+    centroids = initialize(dataset, k)
+
+    # Report original centroids
+    centroids_origin = centroids.copy()
+
+    changed = True
+    n_iter = 0
+
+    # Loop until no changes to cluster assignments
+    while changed:
+
+        changed = False
+
+        # For every row in dataset
+        for i in range(m):
+
+            # Track minimum distance, and index it
+            min_dist = np.inf
+            min_index = -1
+
+            # Find distances
+            for j in range(k):
+                distance = metric.euclidean(centroids[j, :], dataset[i, :])
+                if distance < min_dist:
+                    min_dist = distance
+                    min_index = j
+
+            # Check if a point's cluster assignment has changed
+            if cluster_class[i, 0] != min_index:
+                changed = True
+
+            # Assign point to nearest cluster and distance
+            cluster_class[i, :] = min_index, min_dist ** 2
+
+        # Update centroid locations
+        for cent in range(k):
+            points = dataset[np.nonzero(cluster_class[:, 0].A == cent)[0]]
+            centroids[cent, :] = np.mean(points, axis=0)
+
+        # iterations
+        n_iter += 1
+        print(n_iter)
+    # Return stuff when done
+    return centroids, cluster_class, n_iter, centroids_origin
 
 
-def find_neighbors(training_set, test_point, k):
-    distances = []
-    length = len(test_point) - 1
-    for x in range(len(training_set)):
-        dist = find_distance(test_point, training_set[x], length)
-        distances.append((training_set[x], dist))
-    distances.sort(key=operator.itemgetter(1))
-    z_neighbors = []
-    for x in range(k):
-        z_neighbors.append(distances[x][0])
-    return z_neighbors
-
-
-print('k-nearest Neighbors Algorithm in Python')
-var = int(input("Enter Value for K: "))
-k = var
-z = (k - 1) + k
-filename = 'KNN_Data.csv'
-np.genfromtxt(filename, delimiter=',')
+# Dataset preparations
+print('k Means Clustering Algorithm in Python')
+filename = 'kmeans_data.csv'
 dataset = np.genfromtxt(filename, delimiter=',')
-plt.scatter(dataset[:, 0], dataset[:, 1], c=dataset[:, -1])
-testSet = np.array([[0.8, 0.2], [0.55, 0.2], [0.2, 00.4]])
-plt.scatter(testSet[:, 0], testSet[:, 1])
-print('Dataset')
-print(dataset)
-print('Test Points')
-print(testSet)
+plt.scatter(dataset[:, 0], dataset[:, 1])
 plt.show()
-predictions = []
-print('Neighbors')
-for x in range(len(testSet)):
-        neighbors = find_neighbors(dataset, testSet[x], z)
-        print(neighbors[0:k])
-        color = find_color(neighbors, k)
-        predictions.append(color)
-predictions = np.asarray(predictions)
-predictions = predictions.reshape((-1, 1))
-newSet = np.concatenate((testSet, predictions), axis=1)
-print('Final Results')
-print(newSet)
-plt.scatter(dataset[:, 0], dataset[:, 1], c=dataset[:, -1])
-plt.scatter(newSet[:, 0], newSet[:, 1], c=newSet[:, -1])
+
+# Set Number of Centroids
+var = int(input("Number of Centroids: "))
+k = var
+
+# Perform k-means clustering
+centroids, cluster_classes, n, origin_centroids = cluster(dataset, k)
+
+# Output results
+print('Number of iterations:', n)
+print('\nFinal centroids:\n', centroids)
+print('\nOriginal centroids:\n', origin_centroids)
+newSet = np.concatenate((dataset, cluster_classes), axis=1)
+plt.scatter([newSet[:, 0]], [newSet[:, 1]], c=[newSet[:, 2]])
 plt.show()
